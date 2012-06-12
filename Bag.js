@@ -103,23 +103,41 @@ Bag.prototype = {
         return fieldsString;
     },
 
+    /**
+     * Check if a field is required by traversing all its children.
+     * if it returns false, it found no required field,
+     * if it returns 'a+', it means field should be automatically added
+     * because there is required fields, but it has a defaultValue,
+     * other returned value means there is a required field without defaultValue.
+     *
+     * @todo try to find another approach to return append instruction
+     *
+     * @param fields
+     * @return mixed
+     */
     isObjectRequired: function(fields) {
+
+        var isRequired = false;
 
         for (var fieldName in fields) {
             if (fields.hasOwnProperty(fieldName)) {
                 var fieldConfig = fields[fieldName];
                 if (fieldConfig.hasOwnProperty('required') && fieldConfig.required === true) {
-                    return fieldName;
+                    if (fieldConfig.defaultValue !== null && fieldConfig.defaultValue !== undefined) {
+                        isRequired = 'a+'; // send an append instruction
+                    } else {
+                        return fieldName;
+                    }
                 } else if (fieldConfig.hasOwnProperty('fields')) {
-                    var isRequired = this.isObjectRequired(fieldConfig.fields);
-                    if (isRequired !== false) {
-                        return isRequired;
+                    var isSubRequired = this.isObjectRequired(fieldConfig.fields);
+                    if (isSubRequired !== false && isSubRequired !== 'a+') {
+                        return isSubRequired;
                     }
                 }
             }
         }
 
-        return false;
+        return isRequired;
     },
 
     put: function(config, options) {
@@ -140,7 +158,11 @@ Bag.prototype = {
                     if (!config.hasOwnProperty(fieldName)) {
                         var isRequired = this.isObjectRequired(fieldOptions.fields);
                         if (isRequired !== false) {
-                            throw 'Encountred required sub field "' + isRequired + '" for non existing field "' + fieldName + '"';
+                            if (isRequired === 'a+') {
+                                config[fieldName] = this.put({}, fieldOptions.fields);
+                            } else {
+                                throw 'Encountred required sub field "' + isRequired + '" for non existing field "' + fieldName + '"';
+                            }
                         }
                     } else {
                         config[fieldName] = this.put(config[fieldName], fieldOptions.fields);

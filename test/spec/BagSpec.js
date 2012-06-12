@@ -94,7 +94,46 @@ describe('Bag', function() {
         });
         expect(function(){
             bag.put({});
-        }).toThrow('Encountred required sub field "type" for non existing field "address"');
+        }).toThrow('Encountred required sub field "name" for non existing field "address"');
+    });
+
+    it('should automatically append field if sub fields are required with default value', function() {
+        var bag = new Bag();
+        bag.add('fullname', {
+            fields: {
+                firstname: {
+                    required: true,
+                    defaultValue: 'John'
+                },
+                lastname: {
+                    required: true,
+                    defaultValue: 'Doe'
+                }
+            }
+        });
+        bag.add('address', {
+            fields: {
+                number: {
+                    required: true,
+                    defaultValue: 0
+                },
+                type: {
+                    required: true,
+                    defaultValue: 'street'
+                },
+                country: {}
+            }
+        });
+        expect(bag.put({})).toEqual({
+          fullname: {
+            firstname: 'John',
+            lastname: 'Doe'
+          },
+          address: {
+            number: 0,
+            type: 'street'
+          }
+        });
     });
 
     it('should output a string representation of the bag config for non nested fields', function() {
